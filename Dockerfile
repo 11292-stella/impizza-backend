@@ -1,4 +1,4 @@
 FROM eclipse-temurin:21-jdk
 WORKDIR /app
-COPY impizza/target/Based_security_project-0.0.1-SNAPSHOT.jar app.jar
+COPY Based_security_project-0.0.1-SNAPSHOT.jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]

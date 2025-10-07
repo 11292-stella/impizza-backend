@@ -4,6 +4,7 @@ package com.impizza.impizza.controller;
 import com.impizza.impizza.dto.AuthResponse;
 import com.impizza.impizza.dto.LoginDto;
 import com.impizza.impizza.dto.UserDto;
+import com.impizza.impizza.enumeration.Role;
 import com.impizza.impizza.exception.NotFoundException;
 import com.impizza.impizza.exception.ValidationException;
 import com.impizza.impizza.model.User;
@@ -27,14 +28,21 @@ public class AuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public User register(@RequestBody @Validated UserDto userDto, BindingResult bindingResult) throws ValidationException {
+    public AuthResponse register(@RequestBody @Validated UserDto userDto, BindingResult bindingResult) throws ValidationException {
         if (bindingResult.hasErrors()) {
             String errorMessage = bindingResult.getAllErrors().stream()
                     .map(objectError -> objectError.getDefaultMessage())
                     .reduce("", (s, e) -> s + e + " ");
             throw new ValidationException(errorMessage.trim());
         }
-        return userService.saveUser(userDto);
+
+        // Assegna ruolo CLIENTE nel service
+        User nuovoUtente = userService.saveUser(userDto);
+        nuovoUtente.setRole(Role.CLIENTE); // ← se non già assegnato nel service
+
+        String token = authService.generateToken(nuovoUtente);
+
+        return new AuthResponse(token, nuovoUtente.getUsername(), nuovoUtente.getRole().name());
     }
 
     @PostMapping("/login")

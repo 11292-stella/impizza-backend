@@ -1,5 +1,6 @@
 package com.impizza.impizza.security;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,32 +25,28 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private final ApplicationContext context;
 
-    private final ApplicationContext applicationContext;
-
-
-    public SecurityConfig(ApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
+    public SecurityConfig(ApplicationContext context) {
+        this.context = context;
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.formLogin(http -> http.disable());
-        httpSecurity.csrf(http -> http.disable());
-        httpSecurity.sessionManagement(http -> http.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-        httpSecurity.cors(Customizer.withDefaults());
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        JwtFilter jwtFilter = context.getBean(JwtFilter.class);
 
-
-        JwtFilter jwtFilter = applicationContext.getBean(JwtFilter.class);
-        httpSecurity.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
-        httpSecurity.authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/auth/**", "/api/register", "/api/login").permitAll()
-                .requestMatchers("/cliente/**").hasAuthority("ADMIN")
-                .anyRequest().authenticated()
-        );
-
-        return httpSecurity.build();
+        return http
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/login", "/api/register").permitAll()
+                        .requestMatchers("/ordini/**").hasAuthority("CLIENTE")
+                        .requestMatchers("/cliente/**").hasAuthority("ADMIN")
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .build();
     }
 
     @Bean
@@ -59,15 +56,14 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOriginPatterns(List.of("http://localhost:*"));
-        corsConfiguration.setAllowedMethods(List.of("*"));
-        corsConfiguration.setAllowedHeaders(List.of("*"));
-        corsConfiguration.setAllowCredentials(true);
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOriginPatterns(List.of("http://localhost:*"));
+        config.setAllowedMethods(List.of("*"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfiguration);
-
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 }

@@ -3,11 +3,13 @@ package com.impizza.impizza.dto;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class OrdineDto {
 
 
 
-    @NotEmpty(message = "Il tipo di ingrediente è obbligatorio")
-    private String ingredienti;
+    @NotEmpty(message = "Almeno un ingrediente è obbligatorio")
+    private List<String> ingredienti;
 }

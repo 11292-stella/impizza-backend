@@ -11,12 +11,15 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
-
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
@@ -25,40 +28,41 @@ public class JwtFilter extends OncePerRequestFilter {
     private JwtTool jwtTool;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String authorization = request.getHeader("Authorization");
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
-            throw new UnAuthorizedException("Token non presente o malformato. Non sei autorizzato ad usare il servizio richiesto.");
-        } else {
-            String token = authorization.substring(7);
+        String authHeader = request.getHeader("Authorization");
 
-            try {
-                jwtTool.validateToken(token);
-                User user = jwtTool.getUserFromToken(token);
-
-
-                Authentication authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-
-            } catch (NotFoundException | UnAuthorizedException e) {
-
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
-                return;
-            } catch (Exception e) {
-
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Errore durante la validazione del token: " + e.getMessage());
-                return;
-            }
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
+            return;
         }
+
+        String token = authHeader.substring(7);
+
+        try {
+            jwtTool.validateToken(token);
+            User user = jwtTool.getUserFromToken(token);
+
+            Authentication auth = new UsernamePasswordAuthenticationToken(
+                    user,
+                    null,
+                    user.getAuthorities() // ✅ usa direttamente il metodo di User
+            );
+
+            SecurityContextHolder.getContext().setAuthentication(auth);
+
+        } catch (Exception e) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token non valido");
+            return;
+        }
+
+        filterChain.doFilter(request, response);
     }
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+    protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return new AntPathMatcher().match("/auth/**", path)
-                || path.equals("/api/register")
-                || path.equals("/api/login");
+        return path.startsWith("/api/login") || path.startsWith("/api/register");
     }
 }

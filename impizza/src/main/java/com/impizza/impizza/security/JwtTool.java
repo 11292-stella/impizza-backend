@@ -12,50 +12,55 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.List;
 
 
 @Component
 public class JwtTool {
-    @Value("${jwt.duration}")
-    private long durata;
 
     @Value("${jwt.secret}")
-    private String chiaveSegreta;
+    private String secret;
+
+    @Value("${jwt.duration}")
+    private long duration;
 
     @Autowired
     private UserService userService;
 
-    public String createToken(User user) {
+    public String generateToken(User user) {
         return Jwts.builder()
-                .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + durata))
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + duration))
                 .subject(String.valueOf(user.getId()))
-                .signWith(Keys.hmacShaKeyFor(chiaveSegreta.getBytes()))
+                .claim("roles", List.of(user.getRole().name()))
+                .signWith(Keys.hmacShaKeyFor(secret.getBytes()))
                 .compact();
     }
 
     public void validateToken(String token) {
         Jwts.parser()
-                .verifyWith(Keys.hmacShaKeyFor(chiaveSegreta.getBytes()))
+                .verifyWith(Keys.hmacShaKeyFor(secret.getBytes()))
                 .build()
                 .parse(token);
     }
 
     public User getUserFromToken(String token) throws NotFoundException {
-
         String subject = Jwts.parser()
-                .verifyWith(Keys.hmacShaKeyFor(chiaveSegreta.getBytes()))
+                .verifyWith(Keys.hmacShaKeyFor(secret.getBytes()))
                 .build()
                 .parseSignedClaims(token)
                 .getPayload()
                 .getSubject();
 
+        return userService.getUser(Integer.parseInt(subject));
+    }
 
-        if (subject == null || !subject.matches("\\d+")) {
-            throw new NotFoundException("Invalid user ID in token.");
-        }
-
-        int id = Integer.parseInt(subject);
-        return userService.getUser(id);
+    public List<String> getRolesFromToken(String token) {
+        return Jwts.parser()
+                .verifyWith(Keys.hmacShaKeyFor(secret.getBytes()))
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("roles", List.class);
     }
 }

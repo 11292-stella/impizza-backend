@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Data
@@ -25,7 +26,8 @@ public class Ordine {
     @JoinColumn(name = "user_id")
     private User cliente;
 
-    private String ingredienti;
+    @ElementCollection
+    private List<String> ingredienti;
 
     private LocalDateTime dataOrdine;
 

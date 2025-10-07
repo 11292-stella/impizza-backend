@@ -38,7 +38,8 @@ public class UserController {
     // Solo l'admin può aggiornare un utente (es. correzione dati)
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public User updateUser(@PathVariable int id, @RequestBody @Validated UserDto userDto,
+    public User updateUser(@PathVariable int id,
+                           @RequestBody @Validated UserDto userDto,
                            BindingResult bindingResult) throws NotFoundException, ValidationException {
         if (bindingResult.hasErrors()) {
             String errorMessage = bindingResult.getAllErrors().stream()

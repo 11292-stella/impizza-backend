@@ -35,6 +35,6 @@ public class AuthService {
     }
 
     public String generateToken(User user) {
-        return jwtTool.createToken(user);
+        return jwtTool.generateToken(user); // ✅ metodo corretto
     }
 }

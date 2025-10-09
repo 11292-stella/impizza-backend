@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/ordini") // ✅ rotta corretta
+@RequestMapping("/api/ordini")
 public class OrdineController {
 
     @Autowired
